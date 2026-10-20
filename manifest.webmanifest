@@ -1,0 +1,18 @@
+{
+  "name": "Liquidación de gastos",
+  "short_name": "Gastos",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f5",
+  "theme_color": "#123b32",
+  "description": "App web de liquidación de gastos basada en la plantilla Excel original",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
