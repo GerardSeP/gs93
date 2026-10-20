@@ -1,13 +1,13 @@
 # Liquidación de gastos (iPhone + PC)
 
 ## Qué estaba fallando
-1. **No subía el CSV de Revolut**: el lector de CSV tenía mal escritos los saltos de línea, así que nunca separaba las filas.
+1. **No subía el CSV del extracto**: el lector de CSV tenía mal escritos los saltos de línea, así que nunca separaba las filas.
 2. **No descargaba el Excel**: dependía de cargar ExcelJS desde internet (CDN) y de leer la plantilla por red, y en iPhone la descarga automática de archivos falla en apps instaladas.
 3. **No enviaba por mail**: `mailto:` no puede adjuntar archivos.
 
 ## Qué hace ahora
 - ExcelJS y tu plantilla (`1__Plantilla_de_gastos.xlsx`) van **dentro** de la app: funciona sin internet y también abriendo `index.html` directamente en el PC.
-- Importa el CSV de Revolut: solo pagos con tarjeta completados (omite recargas, transferencias e ingresos), te los muestra para marcar cuáles son gasto de empresa y en qué columna van (peaje, parking, dietas…). Evita duplicados.
+- Importa el extracto bancario en CSV: solo gastos completados (importes negativos) (omite recargas, transferencias e ingresos), te los muestra para marcar cuáles son gasto de empresa y en qué columna van (peaje, parking, dietas…). Evita duplicados.
 - **Descargar Excel**: en PC descarga directo; en iPhone abre el menú de compartir («Guardar en Archivos»).
 - **Enviar por correo**: en iPhone y en navegadores compatibles abre el menú de compartir con el Excel ya adjunto (elige Mail/Outlook). Si no es posible, descarga el archivo y abre el correo para que lo adjuntes.
 - Copia de seguridad / restaurar (.json) para pasar los gastos de un dispositivo a otro.
@@ -30,4 +30,8 @@ Política CSP estricta, sin librerías desde CDN, datos importados mostrados com
 ## Privacidad
 - El archivo publicado NO contiene tu nombre ni tu puesto: se escriben en la app y se guardan solo en tu dispositivo.
 - Los gastos y el CSV nunca se suben a GitHub: se quedan en el navegador de cada dispositivo.
-- Nunca subas al repositorio tu CSV de Revolut ni Excel ya rellenados.
+- Nunca subas al repositorio tu extracto bancario CSV ni Excel ya rellenados.
+
+## Versión con cuentas (v8)
+Ver `GUIA_CUENTAS_Y_DOMINIO.md` (dominio + login + gastos guardados en Supabase) y `supabase_setup.sql`.
+Si `config.js` está vacío, la app funciona en modo local como antes.
