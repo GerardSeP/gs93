@@ -7,11 +7,11 @@
   1) Política CSP: solo se ejecuta el código de este archivo (autorizado por firma/hash). Nada externo. No hay scripts en línea,
      no se permite cargar nada de otros dominios y no se puede enviar información a internet (connect-src 'self').
   2) Sin librerías desde CDN: ExcelJS y la plantilla van incluidos dentro de este mismo archivo.
-  3) Datos importados (CSV de Revolut, copia de seguridad) se muestran SIEMPRE como texto
+  3) Datos importados (extracto bancario CSV, copia de seguridad) se muestran SIEMPRE como texto
      (textContent), nunca como HTML, y se validan/limitan antes de guardarse.
   4) Los gastos se guardan solo en este navegador (localStorage). Nada se sube a ningún servidor.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-fknaaFiOJQ27i7oZDSyqirN4fMAoS9odiy+AXE33Qsk=' 'sha256-+gtrkwxEKII6PiP7XqvhpLi0fhv70/SBW5dy7JKs85I=' 'sha256-91TuWZbab3pkZnC/Z0SC6MkG9cq5Fjg5QB+TNtpHwO8='; style-src 'sha256-2wCPcrBL2habDbXfzozJHGqGEkp6a1J7siKkQGpdAbw='; img-src 'self' file: data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-fknaaFiOJQ27i7oZDSyqirN4fMAoS9odiy+AXE33Qsk=' 'sha256-+gtrkwxEKII6PiP7XqvhpLi0fhv70/SBW5dy7JKs85I=' 'sha256-RADfrXdrVAtZboSDmO6mj+Qrl9FP5BR7bLU72vIF1GY='; style-src 'sha256-2wCPcrBL2habDbXfzozJHGqGEkp6a1J7siKkQGpdAbw='; img-src 'self' file: data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#123b32">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -61,7 +61,7 @@ tr.dup td{color:var(--muted)}
 <title>Liquidación de gastos</title>
 </head>
 <body>
-<header><h1>Liquidación de gastos</h1><p>Importa el CSV de Revolut, revisa y genera el Excel de la plantilla.</p></header>
+<header><h1>Liquidación de gastos</h1><p>Importa el extracto bancario de gastos, revisa y genera el Excel de la plantilla.</p></header>
 <main>
 
 <section class="panel">
@@ -82,16 +82,16 @@ tr.dup td{color:var(--muted)}
 </section>
 
 <section class="panel">
-<h2>2. Importar CSV de Revolut</h2>
-<p class="hint">En Revolut: Cuenta → ⋯ → Extracto → Excel/CSV. Después selecciona aquí el archivo .csv.</p>
+<h2>2. Importar extracto bancario de gastos</h2>
+<p class="hint">Descarga el extracto de movimientos de tu banco en formato CSV y selecciónalo aquí.</p>
 <label class="filebtn">Elegir archivo CSV
 <input id="csvFile" type="file" accept=".csv,text/csv,text/plain,application/vnd.ms-excel,.txt"></label>
 <div class="status" id="importStatus" role="status"></div>
 </section>
 
 <section class="panel full" id="previewPanel" hidden>
-<h2>Revisa los movimientos de Revolut</h2>
-<p class="hint">Marca solo los que son gasto de empresa y elige la columna del Excel en la que va cada uno. Solo aparecen pagos con tarjeta; las transferencias y recargas se omiten.</p>
+<h2>Revisa los movimientos del extracto</h2>
+<p class="hint">Marca solo los que son gasto de empresa y elige la columna del Excel en la que va cada uno. Solo aparecen los gastos (importes negativos); las transferencias, recargas e ingresos se omiten.</p>
 <div class="tablewrap"><table><thead><tr><th>✔</th><th>Fecha</th><th>Comercio</th><th>Importe</th><th>Columna Excel</th></tr></thead><tbody id="previewRows"></tbody></table></div>
 <div class="actions"><button id="addSelected" type="button">Añadir seleccionados</button><button id="cancelPreview" type="button" class="secondary">Cancelar</button></div>
 </section>
@@ -300,7 +300,7 @@ window.PLANTILLA_B64="UEsDBAoAAAAIALtIVF24Ku/HegEAAKsGAAATAAAAW0NvbnRlbnRfVHlwZX
   $('#clearAll').addEventListener('click', () => { if (expenses.length && confirm('¿Vaciar todos los gastos de esta liquidación?')) { expenses = []; save(); render(); } });
   ['#month', '#year', '#rate', '#mailTo', '#empName', '#empJob'].forEach(s => $(s).addEventListener('input', () => { save(); render(); }));
 
-  /* ---------- CSV de Revolut ---------- */
+  /* ---------- Extracto bancario CSV ---------- */
   function parseCsv(text) {
     text = text.replace(/^\uFEFF/, '');
     const first = text.split(/\r?\n/, 1)[0] || '';
@@ -328,7 +328,7 @@ window.PLANTILLA_B64="UEsDBAoAAAAIALtIVF24Ku/HegEAAKsGAAATAAAAW0NvbnRlbnRfVHlwZX
     if (/restaur|bar |cerveza|birra|cafe|mercat|vending|serunion|gastro|bocata|pizz|burger|kebab|panader|forn |supermerc|as la ribera|menu/.test(m)) return 'meals';
     return 'invoice';
   }
-  function parseRevolut(text) {
+  function parseStatement(text) {
     const rows = parseCsv(text);
     if (rows.length < 2) throw new Error('El archivo está vacío o no tiene movimientos.');
     const h = rows[0].map(norm);
@@ -342,10 +342,10 @@ window.PLANTILLA_B64="UEsDBAoAAAAIALtIVF24Ku/HegEAAKsGAAATAAAAW0NvbnRlbnRfVHlwZX
     const res = { items: [], skipped: 0, total: rows.length - 1 };
     for (const r of rows.slice(1)) {
       const date = normDate(r[di]), merchant = clean(r[mi], 80), signed = num(r[ai]);
-      const type = ti > -1 ? norm(r[ti]) : 'pago con tarjeta', state = si > -1 ? norm(r[si]) : 'completado';
-      const isCard = /tarjeta|card/.test(type);
+      const type = ti > -1 ? norm(r[ti]) : '', state = si > -1 ? norm(r[si]) : 'completado';
+      const isExpense = !/transfer|recarga|top.?up|ingreso|deposit|cambio|exchange|reembolso|refund/.test(type);
       const done = !state || /complet/.test(state);
-      if (!date || !merchant || signed >= 0 || !isCard || !done) { res.skipped++; continue; }
+      if (!date || !merchant || signed >= 0 || !isExpense || !done) { res.skipped++; continue; }
       const val = r2(Math.abs(signed));
       res.items.push({ date, merchant, value: val, cat: guessCat(merchant), key: date + '|' + merchant.toLowerCase() + '|' + val.toFixed(2) });
     }
@@ -354,12 +354,12 @@ window.PLANTILLA_B64="UEsDBAoAAAAIALtIVF24Ku/HegEAAKsGAAATAAAAW0NvbnRlbnRfVHlwZX
   $('#csvFile').addEventListener('change', async ev => {
     const f = ev.target.files[0]; if (!f) return;
     try {
-      const res = parseRevolut(await f.text());
+      const res = parseStatement(await f.text());
       const known = new Set(expenses.map(x => x.importKey));
       candidates = res.items.map(it => Object.assign(it, { dup: known.has(it.key) }));
-      if (!candidates.length) { setStatus('#importStatus', 'He leído ' + res.total + ' filas pero ninguna es un pago con tarjeta completado.', true); $('#previewPanel').hidden = true; return; }
+      if (!candidates.length) { setStatus('#importStatus', 'He leído ' + res.total + ' filas pero ninguna es un gasto completado.', true); $('#previewPanel').hidden = true; return; }
       showPreview();
-      setStatus('#importStatus', res.total + ' filas leídas: ' + candidates.length + ' pagos con tarjeta; ' + res.skipped + ' omitidas (recargas, transferencias, ingresos o no completadas). Revísalos abajo.');
+      setStatus('#importStatus', res.total + ' filas leídas: ' + candidates.length + ' gastos; ' + res.skipped + ' omitidas (recargas, transferencias, ingresos o no completadas). Revísalos abajo.');
     } catch (err) { setStatus('#importStatus', 'No se ha podido leer el CSV: ' + err.message, true); }
     ev.target.value = '';
   });
@@ -508,7 +508,7 @@ window.PLANTILLA_B64="UEsDBAoAAAAIALtIVF24Ku/HegEAAKsGAAATAAAAW0NvbnRlbnRfVHlwZX
   MONTHS.forEach(m => $('#month').appendChild(el('option', { value: m, text: m })));
   const now = new Date(); $('#month').value = MONTHS[now.getMonth()]; $('#year').value = now.getFullYear();
   load(); resetForm(); render();
-  window.LiqApp = { parseCsv, parseRevolut, buildExcelBuffer, getExpenses: () => expenses, setExpenses: x => { expenses = x; } };
+  window.LiqApp = { parseCsv, parseStatement, buildExcelBuffer, getExpenses: () => expenses, setExpenses: x => { expenses = x; } };
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => { }));
 })();
 </script>
